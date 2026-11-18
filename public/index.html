@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHAYA (غاية) - Task Management</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{50:'#f5f3ff',100:'#ede9fe',300:'#c4b5fd',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',900:'#4c1d95'}}}}}</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Cairo',sans-serif}
+.nav{display:flex;width:100%;align-items:center;gap:.75rem;padding:.75rem 1rem;border-radius:.75rem;font-size:.875rem;font-weight:500;color:#64748b}
+.nav:hover{background:rgba(148,163,184,.15)}.nav.act{background:#f5f3ff;color:#7c3aed}.dark .nav.act{background:rgba(76,29,149,.4);color:#c4b5fd}
+.chip{padding:.5rem 1rem;border-radius:.75rem;font-size:.875rem;font-weight:600;background:rgba(148,163,184,.15);white-space:nowrap}.chip.act{background:#8b5cf6;color:#fff}
+.inp{width:100%;padding:.75rem;border-radius:.75rem;font-size:.875rem;background:rgba(148,163,184,.15);border:1px solid rgba(148,163,184,.25)}.inp:focus{outline:2px solid #8b5cf6}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:1rem}.dark .card{background:#0f172a;border-color:#1e293b}
+.btn{padding:.6rem 1.1rem;border-radius:.75rem;font-size:.875rem;font-weight:600;color:#fff;background:linear-gradient(90deg,#2563eb,#9333ea)}.btn:hover{opacity:.9}.btn:disabled{opacity:.5}
+.day{display:flex;flex-direction:column;align-items:center;gap:2px;padding:.5rem .25rem;border-radius:.75rem;font-size:.875rem;border:1px solid transparent;min-height:3.5rem}
+.day:hover{background:rgba(148,163,184,.15)}.day.today{border-color:#8b5cf6}.day.act{background:#8b5cf6;color:#fff}.dot{width:6px;height:6px;border-radius:9999px;background:#f59e0b}
+</style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen">
+<div id="toasts" class="fixed top-4 start-1/2 -translate-x-1/2 z-[100] space-y-2"></div>
+
+<!-- AUTH -->
+<section id="auth" class="min-h-screen flex items-center justify-center p-4">
+ <div class="card w-full max-w-md p-8 shadow-2xl">
+  <div class="flex items-center gap-3 mb-6">
+   <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white"><i class="fa-solid fa-bullseye text-xl"></i></div>
+   <div><h1 class="font-bold text-2xl">GHAYA</h1><p class="text-xs text-slate-400" data-i18n="tagline"></p></div>
+  </div>
+  <div id="cfg-warn" class="hidden mb-4 p-3 rounded-xl bg-amber-500/10 text-amber-500 text-sm" data-i18n="cfg_warn"></div>
+  <div class="flex gap-2 mb-4"><button id="tab-login" class="chip act flex-1" onclick="W.mode('login')" data-i18n="login"></button><button id="tab-register" class="chip flex-1" onclick="W.mode('register')" data-i18n="register"></button></div>
+  <form onsubmit="W.auth(event)" class="space-y-3">
+   <input id="a-name" class="inp hidden" data-ph="fullname" autocomplete="name">
+   <input id="a-email" type="email" required class="inp" data-ph="email" autocomplete="email">
+   <input id="a-pass" type="password" required minlength="6" class="inp" data-ph="password" autocomplete="current-password">
+   <p id="a-err" class="text-red-500 text-sm hidden"></p>
+   <button id="a-btn" class="btn w-full py-3" data-i18n="login"></button>
+  </form>
+  <button onclick="W.reset()" class="mt-3 text-xs text-brand-500 hover:underline" data-i18n="forgot"></button>
+  <div class="flex items-center gap-3 my-4 text-xs text-slate-400"><hr class="flex-1 border-slate-300 dark:border-slate-700"><span data-i18n="or"></span><hr class="flex-1 border-slate-300 dark:border-slate-700"></div>
+  <button onclick="W.google()" class="w-full py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-brands fa-google me-2"></i><span data-i18n="google"></span></button>
+  <div class="flex justify-center gap-3 mt-6"><button onclick="W.lang()" class="chip lang-btn"></button><button onclick="W.theme()" class="chip"><i class="theme-ic fa-solid fa-moon"></i></button></div>
+ </div>
+</section>
+
+<!-- APP -->
+<div id="app" class="hidden min-h-screen">
+<div class="flex">
+ <aside id="side" class="w-64 card rounded-none border-0 border-e hidden md:flex flex-col justify-between h-screen shrink-0">
+  <div>
+   <div class="p-6 flex items-center gap-3 border-b dark:border-slate-800">
+    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white"><i class="fa-solid fa-bullseye text-xl"></i></div>
+    <div><h1 class="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">GHAYA</h1><span class="text-xs text-slate-400" data-i18n="tagline"></span></div>
+   </div>
+   <nav class="p-4 space-y-1">
+    <button class="nav act" data-tab="dashboard" onclick="W.tab('dashboard')"><i class="fa-solid fa-chart-pie w-5"></i><span data-i18n="nav_dashboard"></span></button>
+    <button class="nav" data-tab="tasks" onclick="W.tab('tasks')"><i class="fa-solid fa-list-check w-5"></i><span data-i18n="nav_tasks"></span></button>
+    <button class="nav" data-tab="calendar" onclick="W.tab('calendar')"><i class="fa-solid fa-calendar-days w-5"></i><span data-i18n="nav_calendar"></span></button>
+    <button class="nav" data-tab="analytics" onclick="W.tab('analytics')"><i class="fa-solid fa-chart-line w-5"></i><span data-i18n="nav_analytics"></span></button>
+    <button class="nav" data-tab="settings" onclick="W.tab('settings')"><i class="fa-solid fa-gear w-5"></i><span data-i18n="nav_settings"></span></button>
+   </nav>
+  </div>
+  <div class="p-4 border-t dark:border-slate-800 space-y-3">
+   <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-100 dark:bg-slate-800/50">
+    <div id="avatar" class="w-10 h-10 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold bg-cover bg-center shrink-0"></div>
+    <div class="overflow-hidden"><h4 id="uname" class="font-bold text-sm truncate"></h4><span id="uemail" class="text-xs text-slate-400 block truncate"></span></div>
+   </div>
+   <button onclick="W.logout()" class="nav"><i class="fa-solid fa-right-from-bracket w-5"></i><span data-i18n="logout"></span></button>
+  </div>
+ </aside>
+
+ <main class="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+  <header class="h-20 card rounded-none border-0 border-b px-4 sm:px-6 flex items-center justify-between shrink-0 gap-3">
+   <div class="flex items-center gap-3"><button class="md:hidden text-xl" onclick="W.menu()"><i class="fa-solid fa-bars"></i></button><h2 id="page-title" class="text-lg sm:text-xl font-bold"></h2></div>
+   <div class="flex items-center gap-2 sm:gap-3">
+    <div class="relative hidden sm:block"><i class="fa-solid fa-search absolute start-3 top-3 text-slate-400 text-sm"></i><input id="search" oninput="W.search(this.value)" data-ph="search" class="inp ps-9 w-56"></div>
+    <button onclick="W.lang()" class="chip lang-btn"></button>
+    <button onclick="W.theme()" class="chip"><i class="theme-ic fa-solid fa-moon"></i></button>
+    <button onclick="W.open()" class="btn"><i class="fa-solid fa-plus"></i> <span class="hidden sm:inline" data-i18n="new_task"></span></button>
+   </div>
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-4 sm:p-6">
+   <div id="v-dashboard" class="space-y-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="stats"></div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+     <div class="lg:col-span-2 card p-6"><h3 class="font-bold text-lg mb-4" data-i18n="chart_month"></h3><div class="h-64"><canvas id="c-month"></canvas></div></div>
+     <div class="card p-6"><h3 class="font-bold text-lg mb-4" data-i18n="chart_pri"></h3><div class="h-56"><canvas id="c-pri"></canvas></div></div>
+    </div>
+   </div>
+
+   <div id="v-tasks" class="space-y-4 hidden">
+    <div class="card p-4 flex gap-2 overflow-x-auto" id="filters"></div>
+    <div class="card overflow-x-auto"><table class="w-full text-start border-collapse min-w-[720px]">
+     <thead><tr class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-400"><th class="p-4 text-start" data-i18n="th_task"></th><th class="p-4 text-start" data-i18n="th_cat"></th><th class="p-4 text-start" data-i18n="th_pri"></th><th class="p-4 text-start" data-i18n="th_date"></th><th class="p-4 text-start" data-i18n="th_status"></th><th class="p-4 text-center" data-i18n="th_act"></th></tr></thead>
+     <tbody id="tbody"></tbody></table></div>
+   </div>
+
+   <div id="v-calendar" class="hidden space-y-4">
+    <div class="card p-6">
+     <div class="flex items-center justify-between mb-4"><button class="chip" onclick="W.month(-1)"><i class="fa-solid fa-chevron-right rtl:rotate-0 ltr:rotate-180"></i></button><h3 id="cal-title" class="font-bold text-lg"></h3><button class="chip" onclick="W.month(1)"><i class="fa-solid fa-chevron-left rtl:rotate-0 ltr:rotate-180"></i></button></div>
+     <div id="cal-grid" class="grid grid-cols-7 gap-1 text-center"></div>
+    </div>
+    <div class="card p-6"><h4 id="day-title" class="font-bold mb-3"></h4><div id="day-list" class="space-y-2 text-sm"></div></div>
+   </div>
+
+   <div id="v-analytics" class="hidden"><div class="card p-6"><h3 class="font-bold text-lg mb-2" data-i18n="analytics_title"></h3><p id="rate" class="text-slate-400 text-sm mb-6"></p><div class="h-80"><canvas id="c-cat"></canvas></div></div></div>
+
+   <div id="v-settings" class="hidden"><div class="card p-6 max-w-xl space-y-4">
+    <h3 class="font-bold text-lg" data-i18n="settings_title"></h3>
+    <div><label class="block text-sm text-slate-400 mb-1" data-i18n="fullname"></label><input id="s-name" class="inp"></div>
+    <div><label class="block text-sm text-slate-400 mb-1" data-i18n="avatar"></label><input id="s-avatar" class="inp" placeholder="https://..."></div>
+    <button onclick="W.saveProfile()" class="btn" data-i18n="save"></button>
+   </div></div>
+  </div>
+ </main>
+</div>
+
+<div id="modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+ <div class="card w-full max-w-md p-6 shadow-2xl space-y-4">
+  <h3 class="font-bold text-lg" id="m-title"></h3><input type="hidden" id="t-id">
+  <div><label class="block text-xs text-slate-400 mb-1" data-i18n="f_title"></label><input id="t-title" maxlength="120" class="inp"></div>
+  <div class="grid grid-cols-2 gap-4">
+   <div><label class="block text-xs text-slate-400 mb-1" data-i18n="th_cat"></label><select id="t-cat" class="inp"></select></div>
+   <div><label class="block text-xs text-slate-400 mb-1" data-i18n="th_pri"></label><select id="t-pri" class="inp"></select></div>
+  </div>
+  <div class="grid grid-cols-2 gap-4">
+   <div><label class="block text-xs text-slate-400 mb-1" data-i18n="th_date"></label><input type="date" id="t-date" class="inp"></div>
+   <div><label class="block text-xs text-slate-400 mb-1" data-i18n="f_time"></label><input type="time" id="t-time" class="inp"></div>
+  </div>
+  <div class="flex justify-end gap-3 pt-2"><button onclick="W.close()" class="chip" data-i18n="cancel"></button><button id="t-save" onclick="W.save()" class="btn" data-i18n="save"></button></div>
+ </div>
+</div>
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,updateProfile,GoogleAuthProvider,signInWithPopup,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,collection,addDoc,updateDoc,deleteDoc,doc,onSnapshot,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ===== ضع بيانات مشروعك من Firebase Console هنا =====
+const cfg={apiKey:"AIzaSyAwe5-N8x8ruJFXDXk1LzfqFF_3g0IxiKc",authDomain:"ghaya-app-670bc.firebaseapp.com",projectId:"ghaya-app-670bc",storageBucket:"ghaya-app-670bc.firebasestorage.app",messagingSenderId:"648431977110",appId:"1:648431977110:web:ff7def86bf5c4dd309b8b7"};
+const ok=!cfg.apiKey.startsWith("YOUR");
+let auth,db;if(ok){const a=initializeApp(cfg);auth=getAuth(a);db=getFirestore(a)}
+
+const D={
+tagline:["منصة إدارة المهام","Task Management"],nav_dashboard:["الرئيسية","Dashboard"],nav_tasks:["المهام","Tasks"],nav_calendar:["التقويم","Calendar"],nav_analytics:["التحليلات","Analytics"],nav_settings:["الإعدادات","Settings"],
+logout:["تسجيل الخروج","Log out"],new_task:["مهمة جديدة","New task"],search:["بحث عن مهمة...","Search tasks..."],total:["إجمالي المهام","Total tasks"],done:["المهام المكتملة","Completed"],pending:["قيد الانتظار","Pending"],streak:["أيام الالتزام","Day streak"],days:["يوم","days"],
+chart_month:["المهام المنجزة شهريًا","Completed tasks per month"],chart_pri:["توزيع الأولويات","Priority breakdown"],f_all:["الكل","All"],
+cat_Study:["دراسة","Study"],cat_Work:["عمل","Work"],cat_Personal:["شخصي","Personal"],cat_Health:["صحة","Health"],pri_High:["عالية","High"],pri_Medium:["متوسطة","Medium"],pri_Low:["منخفضة","Low"],st_pending:["قيد الانتظار","Pending"],st_completed:["مكتملة","Completed"],
+th_task:["المهمة","Task"],th_cat:["التصنيف","Category"],th_pri:["الأولوية","Priority"],th_date:["التاريخ","Date"],th_status:["الحالة","Status"],th_act:["الإجراءات","Actions"],overdue:["متأخرة","Overdue"],
+empty:["لا توجد مهام بعد. ابدأ بإضافة أول مهمة لك.","No tasks yet. Add your first task."],loading:["جارٍ التحميل...","Loading..."],
+analytics_title:["تقرير إنجاز المهام","Task completion report"],rate:["معدل الإنجاز الحالي: ","Current completion rate: "],rate_chart:["المهام","Tasks"],
+settings_title:["إعدادات الحساب","Account settings"],fullname:["الاسم الكامل","Full name"],avatar:["رابط الصورة الشخصية","Profile picture URL"],save:["حفظ","Save"],saved:["تم حفظ التغييرات","Changes saved"],
+m_add:["إضافة مهمة","Add task"],m_edit:["تعديل المهمة","Edit task"],f_title:["عنوان المهمة","Task title"],f_time:["الوقت","Time"],cancel:["إلغاء","Cancel"],need_title:["أدخل عنوان المهمة","Enter a task title"],
+del_confirm:["حذف هذه المهمة؟","Delete this task?"],task_added:["تمت إضافة المهمة","Task added"],task_updated:["تم تحديث المهمة","Task updated"],task_deleted:["تم حذف المهمة","Task deleted"],
+login:["تسجيل الدخول","Log in"],register:["إنشاء حساب","Sign up"],email:["البريد الإلكتروني","Email"],password:["كلمة المرور (6 أحرف على الأقل)","Password (min. 6 characters)"],google:["المتابعة بحساب Google","Continue with Google"],forgot:["نسيت كلمة المرور؟","Forgot password?"],or:["أو","or"],
+reset_sent:["تم إرسال رابط إعادة التعيين إلى بريدك","Reset link sent to your email"],need_email:["اكتب بريدك الإلكتروني أولًا","Enter your email first"],
+e_cred:["البريد أو كلمة المرور غير صحيحة","Wrong email or password"],e_used:["هذا البريد مسجل بالفعل","This email is already registered"],e_weak:["كلمة المرور ضعيفة (6 أحرف على الأقل)","Password too weak (min. 6 characters)"],e_mail:["بريد إلكتروني غير صالح","Invalid email"],e_net:["تحقق من اتصالك بالإنترنت","Check your internet connection"],e_gen:["حدث خطأ، حاول مرة أخرى","Something went wrong, try again"],
+cfg_warn:["لم يتم إعداد Firebase بعد: ضع بيانات مشروعك في المتغير cfg داخل الملف.","Firebase isn't configured: add your project keys to cfg in this file."],
+no_day:["لا مهام في هذا اليوم","No tasks on this day"],hello:["أهلًا ","Welcome, "]};
+const $=i=>document.getElementById(i),$$=s=>document.querySelectorAll(s);
+let lang=localStorage.lang||"ar",dark=localStorage.theme!=="light",tasks=[],loaded=false,filter="all",q="",tabId="dashboard",cal=new Date(),sel=null,mode="login",unsub=null,charts={};
+const t=k=>(D[k]||[k,k])[lang==="ar"?0:1],L=()=>lang==="ar"?"ar-EG":"en-US";
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10),today=()=>iso(new Date());
+function toast(m,err){const e=document.createElement("div");e.className="px-4 py-2 rounded-xl text-sm text-white shadow-lg "+(err?"bg-red-600":"bg-emerald-600");e.textContent=m;$("toasts").appendChild(e);setTimeout(()=>e.remove(),3200)}
+
+function applyStatic(){
+ document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.classList.toggle("dark",dark);
+ $$("[data-i18n]").forEach(e=>e.textContent=t(e.dataset.i18n));$$("[data-ph]").forEach(e=>e.placeholder=t(e.dataset.ph));
+ $$(".lang-btn").forEach(e=>e.textContent=lang==="ar"?"EN":"AR");$$(".theme-ic").forEach(e=>e.className="theme-ic fa-solid "+(dark?"fa-moon":"fa-sun"));
+ $("t-cat").innerHTML=["Study","Work","Personal","Health"].map(c=>`<option value="${c}">${t("cat_"+c)}</option>`).join("");
+ $("t-pri").innerHTML=["High","Medium","Low"].map(c=>`<option value="${c}">${t("pri_"+c)}</option>`).join("");
+ $("page-title").textContent=t("nav_"+tabId);$("a-btn").textContent=t(mode);
+ Chart.defaults.color=dark?"#94a3b8":"#475569";Chart.defaults.borderColor=dark?"#1e293b":"#e2e8f0";Chart.defaults.font.family="Cairo";
+}
+function renderAll(){applyStatic();renderFilters();renderTasks();renderStats();renderCal();renderCharts()}
+
+function renderFilters(){$("filters").innerHTML=["all","Study","Work","Personal","Health"].map(c=>`<button class="chip ${filter===c?"act":""}" onclick="W.filter('${c}')">${t(c==="all"?"f_all":"cat_"+c)}</button>`).join("")}
+function renderTasks(){
+ const list=tasks.filter(x=>(filter==="all"||x.category===filter)&&x.title.toLowerCase().includes(q.toLowerCase()));
+ if(!loaded){$("tbody").innerHTML=`<tr><td colspan="6" class="p-8 text-center text-slate-400">${t("loading")}</td></tr>`;return}
+ if(!list.length){$("tbody").innerHTML=`<tr><td colspan="6" class="p-8 text-center text-slate-400">${t("empty")}</td></tr>`;return}
+ const pc={High:"bg-red-500/10 text-red-500",Medium:"bg-amber-500/10 text-amber-500",Low:"bg-emerald-500/10 text-emerald-500"};
+ $("tbody").innerHTML=list.map(x=>{const od=x.status!=="completed"&&x.date<today(),dn=x.status==="completed";return `<tr class="border-b dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+ <td class="p-4 font-semibold text-sm ${dn?"line-through opacity-60":""}">${esc(x.title)}</td>
+ <td class="p-4"><span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-300">${t("cat_"+x.category)}</span></td>
+ <td class="p-4"><span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${pc[x.priority]}">${t("pri_"+x.priority)}</span></td>
+ <td class="p-4 text-sm text-slate-400">${x.date}${x.time?" "+x.time:""}${od?` <span class="text-red-500 font-semibold">(${t("overdue")})</span>`:""}</td>
+ <td class="p-4"><span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${dn?"bg-emerald-500/10 text-emerald-500":"bg-slate-500/10 text-slate-400"}">${t("st_"+x.status)}</span></td>
+ <td class="p-4 text-center whitespace-nowrap"><button onclick="W.toggle('${x.id}')" class="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-xl"><i class="fa-solid fa-check"></i></button><button onclick="W.open('${x.id}')" class="p-2 text-blue-500 hover:bg-blue-500/10 rounded-xl"><i class="fa-solid fa-pen"></i></button><button onclick="W.del('${x.id}')" class="p-2 text-red-500 hover:bg-red-500/10 rounded-xl"><i class="fa-solid fa-trash"></i></button></td></tr>`}).join("")}
+
+function streak(){const s=new Set(tasks.filter(x=>x.completedAt).map(x=>x.completedAt));let d=new Date();if(!s.has(iso(d)))d.setDate(d.getDate()-1);let n=0;while(s.has(iso(d))){n++;d.setDate(d.getDate()-1)}return n}
+function renderStats(){
+ const c=tasks.filter(x=>x.status==="completed").length,S=[["total",tasks.length,"blue","list-check"],["done",c,"emerald","circle-check"],["pending",tasks.length-c,"amber","clock"],["streak",streak()+" "+t("days")+" 🔥","purple","fire"]];
+ $("stats").innerHTML=S.map(s=>`<div class="card p-5 shadow-sm flex items-center justify-between"><div><span class="text-slate-400 text-sm">${t(s[0])}</span><h3 class="text-2xl font-bold mt-1 text-${s[2]}-500">${s[1]}</h3></div><div class="w-12 h-12 rounded-xl bg-${s[2]}-500/10 text-${s[2]}-500 flex items-center justify-center text-xl"><i class="fa-solid fa-${s[3]}"></i></div></div>`).join("");
+ const r=tasks.length?Math.round(c/tasks.length*100):0;$("rate").textContent=t("rate")+r+"%";
+}
+function chart(id,type,data,opts){if(charts[id]){charts[id].data=data;charts[id].update()}else charts[id]=new Chart($(id),{type,data,options:Object.assign({responsive:true,maintainAspectRatio:false},opts||{})})}
+function renderCharts(){
+ const n=new Date(),ms=[5,4,3,2,1,0].map(i=>new Date(n.getFullYear(),n.getMonth()-i,1));
+ chart("c-month","line",{labels:ms.map(d=>d.toLocaleDateString(L(),{month:"short"})),datasets:[{label:t("done"),data:ms.map(d=>tasks.filter(x=>x.status==="completed"&&x.date.slice(0,7)===iso(d).slice(0,7)).length),borderColor:"#8b5cf6",backgroundColor:"rgba(139,92,246,.12)",fill:true,tension:.4}]},{scales:{y:{beginAtZero:true,ticks:{precision:0}}}});
+ const P=["High","Medium","Low"];chart("c-pri","doughnut",{labels:P.map(p=>t("pri_"+p)),datasets:[{data:P.map(p=>tasks.filter(x=>x.priority===p).length),backgroundColor:["#ef4444","#f59e0b","#10b981"],borderWidth:0}]});
+ const C=["Study","Work","Personal","Health"];chart("c-cat","bar",{labels:C.map(c=>t("cat_"+c)),datasets:[{label:t("total"),data:C.map(c=>tasks.filter(x=>x.category===c).length),backgroundColor:"#8b5cf6"},{label:t("done"),data:C.map(c=>tasks.filter(x=>x.category===c&&x.status==="completed").length),backgroundColor:"#10b981"}]},{scales:{y:{beginAtZero:true,ticks:{precision:0}}}});
+}
+function renderCal(){
+ const y=cal.getFullYear(),m=cal.getMonth();$("cal-title").textContent=cal.toLocaleDateString(L(),{month:"long",year:"numeric"});
+ let h="";for(let i=0;i<7;i++)h+=`<div class="text-xs text-slate-400 py-1">${new Date(2023,0,1+i).toLocaleDateString(L(),{weekday:"short"})}</div>`;
+ for(let i=0;i<new Date(y,m,1).getDay();i++)h+="<div></div>";
+ for(let d=1;d<=new Date(y,m+1,0).getDate();d++){const ds=iso(new Date(y,m,d)),c=tasks.filter(x=>x.date===ds).length;h+=`<button class="day ${ds===sel?"act":""} ${ds===today()?"today":""}" onclick="W.day('${ds}')"><b>${d}</b>${c?`<i class="dot"></i>`:""}</button>`}
+ $("cal-grid").innerHTML=h;const ds=sel||today(),L2=tasks.filter(x=>x.date===ds);
+ $("day-title").textContent=new Date(ds+"T00:00").toLocaleDateString(L(),{weekday:"long",day:"numeric",month:"long"});
+ $("day-list").innerHTML=L2.length?L2.map(x=>`<div class="flex justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-800/50"><span class="${x.status==="completed"?"line-through opacity-60":""}">${esc(x.title)}${x.time?" · "+x.time:""}</span><span class="text-xs text-slate-400">${t("st_"+x.status)}</span></div>`).join(""):`<p class="text-slate-400">${t("no_day")}</p>`}
+
+function setProfile(u){const n=u.displayName||u.email.split("@")[0];$("uname").textContent=n;$("uemail").textContent=u.email;$("s-name").value=u.displayName||"";$("s-avatar").value=u.photoURL||"";const a=$("avatar");a.style.backgroundImage=u.photoURL?`url("${u.photoURL}")`:"";a.textContent=u.photoURL?"":n.charAt(0).toUpperCase()}
+const errMsg=e=>({"auth/invalid-credential":"e_cred","auth/wrong-password":"e_cred","auth/user-not-found":"e_cred","auth/email-already-in-use":"e_used","auth/weak-password":"e_weak","auth/invalid-email":"e_mail","auth/network-request-failed":"e_net"}[e.code]||"e_gen");
+const col=()=>collection(db,"users",auth.currentUser.uid,"tasks");
+
+if(ok)onAuthStateChanged(auth,u=>{
+ if(unsub){unsub();unsub=null}
+ if(u){$("auth").classList.add("hidden");$("app").classList.remove("hidden");setProfile(u);loaded=false;renderAll();
+  unsub=onSnapshot(col(),s=>{tasks=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||"")));loaded=true;renderAll()},()=>toast(t("e_gen"),1))}
+ else{tasks=[];$("app").classList.add("hidden");$("auth").classList.remove("hidden")}});
+
+const W=window.W={
+ mode(m){mode=m;$("a-name").classList.toggle("hidden",m!=="register");$("tab-login").classList.toggle("act",m==="login");$("tab-register").classList.toggle("act",m==="register");$("a-err").classList.add("hidden");$("a-btn").textContent=t(m)},
+ async auth(e){e.preventDefault();if(!ok)return toast(t("cfg_warn"),1);const b=$("a-btn"),em=$("a-email").value.trim(),pw=$("a-pass").value;b.disabled=true;$("a-err").classList.add("hidden");
+  try{if(mode==="login")await signInWithEmailAndPassword(auth,em,pw);else{const c=await createUserWithEmailAndPassword(auth,em,pw);const n=$("a-name").value.trim();if(n){await updateProfile(c.user,{displayName:n});setProfile(auth.currentUser)}}}
+  catch(x){$("a-err").textContent=t(errMsg(x));$("a-err").classList.remove("hidden")}b.disabled=false},
+ async google(){if(!ok)return toast(t("cfg_warn"),1);try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(x){if(x.code!=="auth/popup-closed-by-user")toast(t(errMsg(x)),1)}},
+ async reset(){if(!ok)return toast(t("cfg_warn"),1);const em=$("a-email").value.trim();if(!em)return toast(t("need_email"),1);try{await sendPasswordResetEmail(auth,em);toast(t("reset_sent"))}catch(x){toast(t(errMsg(x)),1)}},
+ logout(){signOut(auth)},
+ tab(id){tabId=id;["dashboard","tasks","calendar","analytics","settings"].forEach(k=>$("v-"+k).classList.toggle("hidden",k!==id));$$(".nav[data-tab]").forEach(b=>b.classList.toggle("act",b.dataset.tab===id));$("page-title").textContent=t("nav_"+id);
+  const s=$("side");if(!s.classList.contains("md:flex")||s.classList.contains("fixed"))W.menu(true);Object.values(charts).forEach(c=>c.resize())},
+ menu(close){const s=$("side"),open=s.classList.contains("fixed");if(close===true&&!open)return;["hidden","fixed","inset-y-0","z-40","shadow-2xl"].forEach(c=>s.classList.toggle(c));s.classList.toggle("end-0",!open)},
+ lang(){lang=lang==="ar"?"en":"ar";localStorage.lang=lang;renderAll();W.mode(mode)},
+ theme(){dark=!dark;localStorage.theme=dark?"dark":"light";renderAll()},
+ search(v){q=v;if(tabId!=="tasks")W.tab("tasks");renderTasks()},
+ filter(c){filter=c;renderFilters();renderTasks()},
+ open(id){const x=tasks.find(k=>k.id===id)||{};$("t-id").value=id||"";$("m-title").textContent=t(id?"m_edit":"m_add");$("t-title").value=x.title||"";$("t-cat").value=x.category||"Study";$("t-pri").value=x.priority||"Medium";$("t-date").value=x.date||today();$("t-time").value=x.time||"";$("modal").classList.replace("hidden","flex");$("t-title").focus()},
+ close(){$("modal").classList.replace("flex","hidden")},
+ async save(){const title=$("t-title").value.trim();if(!title)return toast(t("need_title"),1);const id=$("t-id").value,d={title,category:$("t-cat").value,priority:$("t-pri").value,date:$("t-date").value||today(),time:$("t-time").value},b=$("t-save");b.disabled=true;
+  try{if(id){await updateDoc(doc(col(),id),d);toast(t("task_updated"))}else{await addDoc(col(),{...d,status:"pending",completedAt:null,createdAt:serverTimestamp()});toast(t("task_added"))}W.close()}catch(x){toast(t("e_gen"),1)}b.disabled=false},
+ async toggle(id){const x=tasks.find(k=>k.id===id),c=x.status==="completed";try{await updateDoc(doc(col(),id),{status:c?"pending":"completed",completedAt:c?null:today()})}catch(e){toast(t("e_gen"),1)}},
+ async del(id){if(!confirm(t("del_confirm")))return;try{await deleteDoc(doc(col(),id));toast(t("task_deleted"))}catch(e){toast(t("e_gen"),1)}},
+ month(n){cal=new Date(cal.getFullYear(),cal.getMonth()+n,1);renderCal()},
+ day(ds){sel=ds;renderCal()},
+ async saveProfile(){try{await updateProfile(auth.currentUser,{displayName:$("s-name").value.trim()||null,photoURL:$("s-avatar").value.trim()||null});setProfile(auth.currentUser);toast(t("saved"))}catch(e){toast(t("e_gen"),1)}}
+};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")W.close()});
+if(!ok)$("cfg-warn").classList.remove("hidden");
+applyStatic();
+</script>
+</body>
+</html>
